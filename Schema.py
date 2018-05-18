@@ -21,8 +21,8 @@ schema = {
                             "type": {"type": "string", "enum": ["rectangle"]},
                             "x": {"type": "integer"},
                             "y": {"type": "integer"},
-                            "width": {"type": "integer"},
-                            "height": {"type": "integer"},
+                            "width": {"type": "integer", "minimum": 1},
+                            "height": {"type": "integer", "minimum": 1},
                             "color": {"type": "string"}
                         },
                         "required": ["type", "x", "y", "width", "height"]
@@ -33,7 +33,7 @@ schema = {
                             "type": {"type": "string", "enum": ["square"]},
                             "x": {"type": "integer"},
                             "y": {"type": "integer"},
-                            "size": {"type": "integer"},
+                            "size": {"type": "integer", "minimum": 1},
                             "color": {"type": "string"}
                         },
                         "required": ["type", "x", "y", "size"]
@@ -44,7 +44,7 @@ schema = {
                             "type": {"type": "string", "enum": ["circle"]},
                             "x": {"type": "integer"},
                             "y": {"type": "integer"},
-                            "radius": {"type": "integer"},
+                            "radius": {"type": "integer", "minimum": 1},
                             "color": {"type": "string"}
                         },
                         "required": ["type", "x", "y", "radius"]
@@ -55,6 +55,7 @@ schema = {
                             "type": {"type": "string", "enum": ["polygon"]},
                             "points": {
                                 "type": "array",
+                                "minItems": 3,
                                 "items": {
                                     "type": "array",
                                     "minItems": 2,
@@ -76,10 +77,13 @@ schema = {
                 "height": {"type": "integer", "minimum": 1},
                 "bg_color": {"type": "string"},
                 "fg_color": {"type": "string"}
-            }
+            },
+            "required": ["width", "height", "bg_color", "fg_color"]
         },
         "Palette": {
-            "type": "object"
+            "type": "object",
+            "additionalProperties": {"type": "string"}
         }
-    }
+    },
+    "required": ["Figures", "Screen", "Palette"]
 }

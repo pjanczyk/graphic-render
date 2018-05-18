@@ -1,5 +1,6 @@
 import json
 import re
+import sys
 from argparse import ArgumentParser
 
 import jsonschema
@@ -157,19 +158,38 @@ def parse_arguments():
 def main():
     args = parse_arguments()
 
-    with open(args.input) as f:
-        data = json.load(f)
+    try:
+        with open(args.input) as f:
+            raw_json = f.read()
+    except Exception as e:
+        print(f"Error: Failed to load input file:", e)
+        sys.exit(1)
 
-    jsonschema.validate(data, Schema.schema)
+    try:
+        data = json.loads(raw_json)
+    except Exception as e:
+        print(f"Error: Invalid JSON file: ", e)
+        sys.exit(1)
 
-    graphic = Graphic(data)
+    try:
+        jsonschema.validate(data, Schema.schema)
+    except jsonschema.exceptions.ValidationError as e:
+        print("Error: JSON does not match schema:", e)
+        sys.exit(1)
+
+    try:
+        graphic = Graphic(data)
+    except ColorNotFoundException as e:
+        print("Error:", e)
+        sys.exit(1)
+
     image = graphic.render()
 
     if args.output:
         image.save(args.output, format='PNG')
 
     image_qt = ImageQt(image)
-    exit(show_image_viewer(image_qt))
+    sys.exit(show_image_viewer(image_qt))
 
 
 if __name__ == '__main__':
