@@ -14,20 +14,13 @@ class ColorNotFoundException(Exception):
     pass
 
 
-def parse_arguments():
-    parser = ArgumentParser()
-    parser.add_argument('input', metavar='INPUT', help='input JSON file, description of image')
-    parser.add_argument('-o', '--output', dest='output', help='save image to file (PNG)')
-    return parser.parse_args()
-
-
 class Graphic:
-    def __init__(self, graphic):
+    def __init__(self, data):
         self.palette = {}
         self.palette = {name: self.decode_color(value)
-                        for (name, value) in graphic['Palette'].items()}
+                        for (name, value) in data['Palette'].items()}
 
-        screen = graphic['Screen']
+        screen = data['Screen']
         self.screen_width = screen['width']
         self.screen_height = screen['height']
         self.screen_background = self.decode_color(screen['bg_color'])
@@ -46,9 +39,9 @@ class Graphic:
             constructor = figure_types[type_]
             return constructor(figure, self)
 
-        self.figures = list(map(decode_figure, graphic['Figures']))
+        self.figures = [decode_figure(figure) for figure in data['Figures']]
 
-    def decode_color(self, val):
+    def decode_color(self, val: str) -> int:
         def make_color(r, g, b):
             return (r << 16) | (g << 8) | b
 
@@ -68,7 +61,7 @@ class Graphic:
                 raise ColorNotFoundException(f"Not found color '{val}'")
             return color
 
-    def render(self):
+    def render(self) -> Image:
         image = Image.new('RGB', (self.screen_width, self.screen_height), self.screen_background)
         draw = ImageDraw.Draw(image)
 
@@ -79,32 +72,32 @@ class Graphic:
 
 
 class Figure:
-    def __init__(self, figure, graphic):
-        if 'color' in figure:
-            self.color = graphic.decode_color(figure['color'])
+    def __init__(self, data, graphic: Graphic):
+        if 'color' in data:
+            self.color = graphic.decode_color(data['color'])
         else:
             self.color = graphic.screen_foreground
 
 
 class Point(Figure):
-    def __init__(self, figure, graphic):
-        super().__init__(figure, graphic)
-        self.x = figure['x']
-        self.y = figure['y']
+    def __init__(self, data, graphic: Graphic):
+        super().__init__(data, graphic)
+        self.x = data['x']
+        self.y = data['y']
 
-    def draw(self, draw):
+    def draw(self, draw: ImageDraw):
         draw.point([self.x, self.y], self.color)
 
 
 class Rectangle(Figure):
-    def __init__(self, figure, graphic):
-        super().__init__(figure, graphic)
-        self.x = figure['x']
-        self.y = figure['y']
-        self.width = figure['width']
-        self.height = figure['height']
+    def __init__(self, data, graphic: Graphic):
+        super().__init__(data, graphic)
+        self.x = data['x']
+        self.y = data['y']
+        self.width = data['width']
+        self.height = data['height']
 
-    def draw(self, draw):
+    def draw(self, draw: ImageDraw):
         x0 = self.x - self.width / 2
         y0 = self.y - self.height / 2
         x1 = self.x + self.width / 2
@@ -114,13 +107,13 @@ class Rectangle(Figure):
 
 
 class Square(Figure):
-    def __init__(self, figure, graphic):
-        super().__init__(figure, graphic)
-        self.x = figure['x']
-        self.y = figure['y']
-        self.size = figure['size']
+    def __init__(self, data, graphic: Graphic):
+        super().__init__(data, graphic)
+        self.x = data['x']
+        self.y = data['y']
+        self.size = data['size']
 
-    def draw(self, draw):
+    def draw(self, draw: ImageDraw):
         x0 = self.x - self.size / 2
         y0 = self.y - self.size / 2
         x1 = self.x + self.size / 2
@@ -130,13 +123,13 @@ class Square(Figure):
 
 
 class Circle(Figure):
-    def __init__(self, figure, graphic):
-        super().__init__(figure, graphic)
-        self.x = figure['x']
-        self.y = figure['y']
-        self.radius = figure['radius']
+    def __init__(self, data, graphic: Graphic):
+        super().__init__(data, graphic)
+        self.x = data['x']
+        self.y = data['y']
+        self.radius = data['radius']
 
-    def draw(self, draw):
+    def draw(self, draw: ImageDraw):
         x0 = self.x - self.radius / 2
         y0 = self.y - self.radius / 2
         x1 = self.x + self.radius / 2
@@ -146,20 +139,25 @@ class Circle(Figure):
 
 
 class Polygon(Figure):
-    def __init__(self, figure, graphic):
-        super().__init__(figure, graphic)
-        self.points = [tuple(point) for point in figure['points']]
+    def __init__(self, data, graphic: Graphic):
+        super().__init__(data, graphic)
+        self.points = [tuple(point) for point in data['points']]
 
-    def draw(self, draw):
+    def draw(self, draw: ImageDraw):
         draw.polygon(self.points, self.color)
+
+
+def parse_arguments():
+    parser = ArgumentParser()
+    parser.add_argument('input', metavar='INPUT', help='input JSON file, description of image')
+    parser.add_argument('-o', '--output', dest='output', help='save image to file (PNG)')
+    return parser.parse_args()
 
 
 def main():
     args = parse_arguments()
-    input_ = args.input
-    output = args.output
 
-    with open(input_) as f:
+    with open(args.input) as f:
         data = json.load(f)
 
     jsonschema.validate(data, Schema.schema)
@@ -167,8 +165,8 @@ def main():
     graphic = Graphic(data)
     image = graphic.render()
 
-    if output:
-        image.save(output, format='PNG')
+    if args.output:
+        image.save(args.output, format='PNG')
 
     image_qt = ImageQt(image)
     exit(show_image_viewer(image_qt))
