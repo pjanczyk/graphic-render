@@ -30,4 +30,6 @@ def show_image_viewer(image: QImage):
     viewer = QtImageViewer(image)
     viewer.show()
 
-    return app.exec()
+    exit_code = app.exec()
+    app.deleteLater()
+    return exit_code
