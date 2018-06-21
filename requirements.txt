@@ -1,0 +1,4 @@
+jsonschema==2.6.0
+Pillow==5.1.0
+PyQt5==5.10.1
+sip==4.19.8
